@@ -1,6 +1,8 @@
 import dotenv from 'dotenv';
 import { yui } from './src/mastra/agents/yui.js';
+import { memoryService } from './src/mastra/services/memory.js';
 import readline from 'readline';
+import { randomUUID } from 'crypto';
 
 dotenv.config();
 
@@ -24,8 +26,12 @@ const colors = {
   white: '\x1b[37m',
 };
 
-// 会話履歴を保存する配列
+// 会話履歴を保存する配列（メモリサービスのバックアップ用）
 let conversationHistory = [];
+
+// ユーザーとセッションの識別子
+const resourceId = process.env.USER_ID || 'default-user';
+const threadId = randomUUID();
 
 // ユイの応答を表示する関数
 function printYuiResponse(text) {
@@ -53,11 +59,26 @@ async function chatLoop() {
   printSystemMessage('終了するには "exit", "quit", "終了" のいずれかを入力してください');
   console.log('');
   
+  // 過去の会話履歴を取得
+  try {
+    printSystemMessage('過去の会話履歴を読み込み中...');
+    const history = await memoryService.getConversationHistory(resourceId, threadId, 10);
+    if (history.length > 0) {
+      printSystemMessage(`${history.length}件の過去の会話を読み込みました`);
+      conversationHistory = history;
+    }
+  } catch (error) {
+    printSystemMessage('過去の会話履歴の読み込みに失敗しました');
+  }
+
   // 初回挨拶
   try {
     printSystemMessage('初回挨拶を準備中...');
     const greeting = await yui.generate('初回の挨拶をしてください。');
     printYuiResponse(greeting.text);
+    
+    // メモリに保存
+    await memoryService.saveConversation(resourceId, threadId, greeting.text, 'assistant');
     conversationHistory.push({ role: 'assistant', content: greeting.text });
   } catch (error) {
     printError(`初期化エラー: ${error.message}`);
@@ -81,6 +102,9 @@ async function chatLoop() {
         try {
           const farewell = await yui.generate('お別れの挨拶をしてください。');
           printYuiResponse(farewell.text);
+          
+          // お別れの挨拶をメモリに保存
+          await memoryService.saveConversation(resourceId, threadId, farewell.text, 'assistant');
         } catch (error) {
           printError(`終了時エラー: ${error.message}`);
         }
@@ -102,12 +126,21 @@ async function chatLoop() {
       try {
         printSystemMessage('ユイが考えています...');
         
+        // ユーザーメッセージをメモリに保存
+        await memoryService.saveConversation(resourceId, threadId, userInput, 'user');
+        
         // 会話履歴をコンテキストに含める
         const contextPrompt = conversationHistory.length > 0 
           ? `過去の会話:\n${conversationHistory.map(msg => `${msg.role === 'user' ? 'ユーザー' : 'ユイ'}: ${msg.content}`).join('\n')}\n\n現在の質問: ${userInput}`
           : userInput;
         
-        const response = await yui.generate(contextPrompt);
+        const response = await yui.generate(contextPrompt, {
+          resourceId,
+          threadId,
+        });
+        
+        // アシスタントの応答をメモリに保存
+        await memoryService.saveConversation(resourceId, threadId, response.text, 'assistant');
         
         // 会話履歴に追加
         conversationHistory.push({ role: 'user', content: userInput });

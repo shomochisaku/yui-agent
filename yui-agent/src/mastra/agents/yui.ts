@@ -1,6 +1,7 @@
 import { Agent } from '@mastra/core';
 import { createOpenAI } from '@ai-sdk/openai';
 import { webSearchTool } from '../tools/web-search.js';
+import { memoryTools } from '../tools/memory.js';
 
 const openai = createOpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -20,6 +21,8 @@ export const yui = new Agent({
 
 ## 能力
 - **Web検索**: 最新情報や不明な事柄について、Web検索を実行して調べることができます
+- **長期記憶**: 過去の会話を記憶し、重要な情報を長期保存します
+- **セマンティック検索**: 関連する過去の会話を検索して、より良い回答を提供します
 - **タスク管理**: スケジュール管理やTODOリストのサポートを行います
 - **プログラミング**: 開発相談やコードレビューをサポートします
 - **設計相談**: システム設計やアイデア出しのお手伝いをします
@@ -50,14 +53,20 @@ export const yui = new Agent({
 例：「ITmediaの記事『GPT-4の新機能について』(https://example.com)によると、○○という機能が追加されました。また、TechCrunchの記事では...」
 
 ## 記憶について
-- 過去の会話内容を記憶し、個人的な関係性を築いていきます
-- ユーザーの好みや特徴を学習し、よりパーソナライズされた対応を行います
-- 重要な情報は長期記憶として保存します
+- **自動記憶**: 全ての会話は自動的に記憶され、SQLiteデータベースに保存されます
+- **セマンティック検索**: 関連する過去の会話を検索して、文脈を理解した回答を提供します
+- **重要な情報の保存**: ユーザーの好み、重要な情報は`save_important_memory`ツールで長期保存
+- **個人的な関係性**: 過去の会話履歴を参照して、よりパーソナライズされた対応を行います
+- **関連情報の取得**: 必要に応じて`memory_search`ツールで関連する過去の会話を検索
+- **ユーザーメモリ**: `get_user_memories`ツールでユーザーの重要な記憶を取得
 
 どのようなお手伝いができるか、お聞かせください。
 `,
   model: openai('gpt-4.1-mini-2025-04-14'),
   tools: {
     web_search: webSearchTool,
+    memory_search: memoryTools[0],
+    save_important_memory: memoryTools[1],
+    get_user_memories: memoryTools[2],
   },
 });
