@@ -1,29 +1,42 @@
 import dotenv from 'dotenv';
-import { createOpenAI } from '@ai-sdk/openai';
-import { Agent } from '@mastra/core';
+import { yui } from './src/mastra/agents/yui.js';
 
 dotenv.config();
 
-const openrouter = createOpenAI({
-  baseURL: process.env.OPENROUTER_BASE_URL,
-  apiKey: process.env.OPENROUTER_API_KEY,
-});
-
-const yui = new Agent({
-  name: 'ユイ',
-  instructions: 'あなたはユイです。優しく応答してください。',
-  model: openrouter('deepseek/deepseek-chat:free'),
-});
-
 async function testAgent() {
+  console.log('🤖 ユイエージェントをテスト中...');
+  console.log('OpenAI API Key:', process.env.OPENAI_API_KEY ? '設定済み' : '未設定');
+  
+  if (!process.env.OPENAI_API_KEY) {
+    console.error('❌ OPENAI_API_KEYが設定されていません。');
+    console.log('環境変数を設定してから再度お試しください。');
+    return;
+  }
+  
   try {
-    console.log('🤖 ユイエージェントをテスト中...');
-    
+    // 基本的な応答テスト
+    console.log('\n📝 基本応答テスト...');
     const response = await yui.generate('こんにちは、ユイ！');
     console.log('✅ 応答:', response.text);
     
+    // 人格テスト
+    console.log('\n👤 人格設定テスト...');
+    const personalityResponse = await yui.generate('あなたは誰ですか？自己紹介してください。');
+    console.log('✅ 自己紹介:', personalityResponse.text);
+    
+    // 検索機能テスト
+    console.log('\n🔍 検索機能テスト...');
+    const searchResponse = await yui.generate('今日の天気について教えてください。');
+    console.log('✅ 検索応答:', searchResponse.text);
+    
+    console.log('\n🎉 全てのテストが完了しました！');
+    
   } catch (error) {
     console.error('❌ エラー:', error.message);
+    console.log('\n🔧 トラブルシューティング:');
+    console.log('- OPENAI_API_KEYが正しく設定されているか確認してください');
+    console.log('- インターネット接続を確認してください');
+    console.log('- OpenAI APIの制限に達していないか確認してください');
   }
 }
 
