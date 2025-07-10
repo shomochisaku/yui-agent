@@ -107,6 +107,17 @@ data/
 *.sqlite
 *.db
 
+# Mastra build outputs (contains sensitive info)
+.mastra/output/
+.mastra/.build/
+
+# Additional security
+*.key
+*.pem
+*.crt
+secrets/
+config/local.json
+
 # OS generated files
 .DS_Store
 .DS_Store?
